@@ -5,6 +5,8 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "isolation_forest.pkl")
+last_trained_timestamp = None
+RETRAIN_THRESHOLD = 50
 
 model = IsolationForest(contamination=0.08, random_state=42)
 
@@ -12,13 +14,15 @@ is_trained = False
 
 
 def train_model(df):
-    global is_trained
+    global is_trained, last_trained_timestamp
 
     print("🚀 training model with rows:", len(df))
 
     if len(df) < 20:
         print("not enough data")
         return
+
+    df = df.tail(500)
 
     X = df[["temperature", "vibration", "pressure"]]
 
@@ -30,7 +34,8 @@ def train_model(df):
     joblib.dump(model, MODEL_PATH)
 
     is_trained = True
-    print("✅ model trained successfully. is_trained =", is_trained)
+    last_trained_timestamp = df["timestamp"].max()
+    print("✅ model trained successfully. is_trained =", is_trained, " last_trained_timestamp =", last_trained_timestamp)
 
 
 def detect_anomaly(row):
@@ -66,6 +71,28 @@ def ensure_model(df):
     if is_trained:
         return
 
-    # Otherwise train
     print("⚠️ model not found. Training now...")
     train_model(df)
+
+
+def should_retrain(df):
+    global last_trained_timestamp
+
+    if df.empty:
+        return False
+
+    latest_ts = df["timestamp"].max()
+
+    # First time → train
+    if last_trained_timestamp is None:
+        return True
+
+    # Count new rows since last training
+    new_rows = df[df["timestamp"] > last_trained_timestamp]
+
+    if len(new_rows) >= RETRAIN_THRESHOLD:
+        print(f"🔥 New data detected: {len(new_rows)} rows → retrain")
+        return True
+
+    print(f"⏭️ Skipping retrain. New rows: {len(new_rows)}")
+    return False

@@ -41,9 +41,9 @@ def next_data():
     row = df.iloc[-1]
     ml_service.load_model()
 
-    if not ml_service.is_trained:
+    if not ml_service.is_trained or ml_service.should_retrain(df):
         print("Before training, is_trained =", ml_service.is_trained)
-        print("⚠️ Model not found, training now...")
+        print("⚠️ Model not found or new data is found, training now...")
         ml_service.train_model(df)
         print("After training, is_trained =", ml_service.is_trained)
 
