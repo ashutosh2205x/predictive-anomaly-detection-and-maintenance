@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from app.db.mongo import collection
+from app.db.mongo import data_collection 
 import pandas as pd
 
 router = APIRouter()
@@ -49,7 +49,7 @@ def get_history():
     print("🗄️ Falling back to MongoDB")
 
     data = list(
-        collection.find({}, {"_id": 0})
+        data_collection.find({}, {"_id": 0})
         .sort("timestamp", -1)
         .limit(200)
     )
